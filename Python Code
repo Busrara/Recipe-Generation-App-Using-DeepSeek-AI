@@ -1,0 +1,55 @@
+
+
+import os
+from dotenv import load_dotenv
+load_dotenv()
+from openai import OpenAI
+import requests
+
+API_KEY = os.getenv("DEEPSEEK_API_KEY")
+BASE_URL = "https://api.deepseek.com"
+
+import gradio as gr
+
+def generate_recipe(ingredients, cuisine):
+  prompt= f"Create a unique recipe using these ingredients: {ingredients}"
+
+  if cuisine:
+    prompt += f"Preferably in {cuisine} style."
+  prompt += " Include ingredients, step-by-step instructions, cooking tips."
+
+  headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+   data = {
+        "model": "deepseek-chat",
+        "messages": [
+            {"role": "system", "content": "You are a creative chef who generates unique recipes."},
+            {"role": "user", "content": prompt}
+        ]
+    }
+
+   try:
+        response = requests.post(f"{BASE_URL}/v1/chat/completions", json=data, headers=headers)
+        response_json = response.json()
+        return response_json["choices"][0]["message"]["content"]
+   except Exception as e:
+        return f"Error generating recipe: {str(e)}"
+
+
+
+generate_recipe("Chicken,Rice,Beans", "Mexican")
+
+iface = gr.Interface(
+    fn=generate_recipe,
+    inputs=[
+        gr.Textbox(label="Ingredients (comma-separated)"),
+        gr.Textbox(label="Cuisine Preference (optional)")
+    ],
+    outputs=gr.Textbox(label="Recipe Suggestion")
+)
+
+if __name__ == "__main__":
+    iface.launch()
